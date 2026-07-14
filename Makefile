@@ -9,7 +9,7 @@
 # on macOS and MRC on Linux is not viable (ARC forbids explicit retain/release),
 # so the project targets MRC everywhere.
 #
-# Linux packages: clang make gnustep-make libgnustep-base-dev libblocksruntime-dev
+# Linux packages: clang make gnustep-make libgnustep-base-dev
 
 UNAME_S := $(shell uname -s)
 
