@@ -81,6 +81,27 @@ So, when writing code here:
 
 Convenience constructors return autoreleased objects. `@autoreleasepool` works fine under the GNU runtime and should be used in `main()`.
 
+## Properties: declare your ivars
+
+The GCC runtime means clang compiles with the **fragile ABI**, which does **not** auto-synthesize backing ivars. The modern macOS style — declare a property, use `_foo`, never mention the ivar — fails on Linux with `error: use of undeclared identifier '_foo'`.
+
+Every class therefore declares its ivars in the `@interface` and `@synthesize`s explicitly:
+
+```objc
+@interface CRCommit : NSObject
+{
+    NSString *_sha;          // declared, not inferred
+}
+@property (nonatomic, readonly, copy) NSString *sha;
+@end
+
+@implementation CRCommit
+@synthesize sha = _sha;      // and wired up by hand
+@end
+```
+
+Verbose, but it is what compiles on both platforms.
+
 ## Troubleshooting
 
 ### `fatal error: 'objc/objc.h' file not found`
