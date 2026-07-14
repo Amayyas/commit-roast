@@ -1,6 +1,7 @@
 #import "CRRoastRuleRegistry.h"
 
 #import "CRAllCapsRule.h"
+#import "CRDuplicateMessageRule.h"
 #import "CREmojiOnlyRule.h"
 #import "CRGenericMessageRule.h"
 #import "CRNoImperativeVerbRule.h"
@@ -18,6 +19,7 @@
         [[[CRAllCapsRule alloc] init] autorelease],
         [[[CREmojiOnlyRule alloc] init] autorelease],
         [[[CRNoImperativeVerbRule alloc] init] autorelease],
+        [[[CRDuplicateMessageRule alloc] init] autorelease],
         nil];
 }
 
