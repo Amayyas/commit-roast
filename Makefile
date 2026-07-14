@@ -65,6 +65,9 @@ all: build
 build: $(BUILD_DIR)/$(BIN)
 
 $(BUILD_DIR)/$(BIN): $(OBJECTS)
+ifeq ($(strip $(SOURCES)),)
+	$(error No sources in $(SRC_DIR)/. Are you at the root of the repository?)
+endif
 	@mkdir -p $(dir $@)
 	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
 
