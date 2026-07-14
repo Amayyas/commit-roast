@@ -1,0 +1,14 @@
+# Build output
+build/
+*.o
+*.d
+
+# Binary (in case it is built outside build/)
+/commit-roast
+
+# macOS
+.DS_Store
+
+# GNUstep
+obj/
+*.build/
