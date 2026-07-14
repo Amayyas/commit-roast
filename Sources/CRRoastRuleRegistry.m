@@ -1,13 +1,24 @@
 #import "CRRoastRuleRegistry.h"
 
+#import "CRAllCapsRule.h"
+#import "CREmojiOnlyRule.h"
+#import "CRGenericMessageRule.h"
+#import "CRNoImperativeVerbRule.h"
+#import "CRShortMessageRule.h"
+
 @implementation CRRoastRuleRegistry
 
 + (NSArray *)defaultRules
 {
-    // Empty until #10 and #11 land: this is the seam they plug into, not an
-    // oversight. The engine (#12) must already behave sanely with no rules —
-    // every commit innocent, score 0 — and it is tested that way.
-    return [NSArray array];
+    // Adding a rule is one line here and nothing else. The engine never learns
+    // any rule's name.
+    return [NSArray arrayWithObjects:
+        [[[CRGenericMessageRule alloc] init] autorelease],
+        [[[CRShortMessageRule alloc] init] autorelease],
+        [[[CRAllCapsRule alloc] init] autorelease],
+        [[[CREmojiOnlyRule alloc] init] autorelease],
+        [[[CRNoImperativeVerbRule alloc] init] autorelease],
+        nil];
 }
 
 @end
