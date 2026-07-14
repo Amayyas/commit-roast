@@ -1,0 +1,7 @@
+# GitHub's Linguist classifies .m as MATLAB and .h as C by default, which would
+# make this repository show up as a MATLAB/C project. Force Objective-C.
+*.m linguist-language=Objective-C
+*.h linguist-language=Objective-C
+
+# Sample output is documentation, not source.
+Examples/* linguist-documentation
