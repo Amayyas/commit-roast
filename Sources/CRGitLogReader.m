@@ -173,8 +173,12 @@ typedef struct {
         return @"";
     }
 
-    NSArray *logArgs = [NSArray arrayWithObjects:
+    // The filters (--limit, --since, --author) are appended as separate array
+    // elements, never spliced into a command string. NSTask goes straight to
+    // execve, so no shell ever sees them.
+    NSMutableArray *logArgs = [NSMutableArray arrayWithObjects:
         @"-C", path, @"--no-pager", @"log", kCRPrettyFormat, nil];
+    [logArgs addObjectsFromArray:[options gitLogArguments]];
 
     CRGitResult result = [self runGitWithArguments:logArgs];
     NSData *out = [result.stdoutData autorelease];
