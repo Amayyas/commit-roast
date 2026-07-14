@@ -17,7 +17,7 @@ make
 Reference environment: **Ubuntu 24.04 LTS** — the same one the CI runs on, so these instructions are actually exercised rather than merely written down.
 
 ```bash
-sudo apt-get install -y clang make gnustep-make libgnustep-base-dev libblocksruntime-dev
+sudo apt-get install -y clang make gnustep-make libgnustep-base-dev
 make
 ./build/commit-roast
 ```
@@ -101,6 +101,18 @@ Every class therefore declares its ivars in the `@interface` and `@synthesize`s 
 ```
 
 Verbose, but it is what compiles on both platforms.
+
+## No blocks
+
+The project does not use blocks, and `CFLAGS` does not carry `-fblocks`. Using one fails with `error: use of undeclared identifier '__block'`.
+
+Enabling them would mean linking against `libBlocksRuntime`, i.e. one more shared library to ship alongside the Linux binaries — for a portability-first project, that is a bad trade. Everything blocks would buy us has a block-free equivalent:
+
+| Instead of | Use |
+|---|---|
+| `enumerateObjectsUsingBlock:` | `NSEnumerator` and a `while` loop |
+| `enumerateSubstringsInRange:` | `rangeOfComposedCharacterSequenceAtIndex:` |
+| `sortedArrayUsingComparator:` | `sortedArrayUsingSelector:` or `sortedArrayUsingFunction:context:` |
 
 ## Troubleshooting
 
