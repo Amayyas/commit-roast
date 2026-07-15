@@ -1,8 +1,13 @@
 #import <Foundation/Foundation.h>
 
 #include <stdio.h>
+#include <unistd.h>
 
 #include "CRVersion.h"
+
+#import "CRArgumentParser.h"
+#import "CRExitCodes.h"
+#import "CRUsage.h"
 
 // Foundation only — importing AppKit or Cocoa here would break the Linux build,
 // since GNUstep only provides gnustep-base.
@@ -23,14 +28,37 @@ static void CRPrintBanner(void)
             CR_VERSION);
 }
 
-int main(int argc, const char *argv[])
+int main(int argc, char *argv[])
 {
-    (void)argc;
-    (void)argv;
-
     @autoreleasepool {
+        CRArgumentParser *parser = [[[CRArgumentParser alloc] init] autorelease];
+        CRArguments *args = [parser parseArguments:argv
+                                             count:argc
+                                       stdoutIsTTY:isatty(STDOUT_FILENO) ? YES : NO];
+
+        // A usage error is the user's, so it goes to stderr with a short reminder
+        // (never the whole help, which would bury the message) and exit code 2.
+        if (![args ok]) {
+            fprintf(stderr, "commit-roast: %s\n", [[args errorMessage] UTF8String]);
+            fprintf(stderr, "%s\n", [[CRUsage synopsis] UTF8String]);
+            fprintf(stderr, "Try 'commit-roast --help' for more information.\n");
+            return CRExitUsageError;
+        }
+
+        // --help and --version are deliberate requests, not errors: stdout, exit 0.
+        if ([args action] == CRActionHelp) {
+            fputs([[CRUsage helpText] UTF8String], stdout);
+            return CRExitSuccess;
+        }
+        if ([args action] == CRActionVersion) {
+            fprintf(stdout, "%s\n", [[CRUsage versionString] UTF8String]);
+            return CRExitSuccess;
+        }
+
+        // The analysis pipeline is wired in with the formatters (#17-#19). For
+        // now the run path prints the banner.
         CRPrintBanner();
     }
 
-    return 0;
+    return CRExitSuccess;
 }
