@@ -7,3 +7,15 @@
 // how long a commit message "is" must use this instead, or "🔥🔥🔥🔥🔥" would
 // count as ten characters and escape the too-short rule.
 NSUInteger CRGraphemeLength(NSString *string);
+
+// Truncates to at most maxGraphemes user-perceived characters, appending "…"
+// when it actually cut something. Counts and cuts on grapheme boundaries, so an
+// emoji is never sliced in half into a replacement character.
+NSString *CRTruncateToGraphemes(NSString *string, NSUInteger maxGraphemes);
+
+// A stable 32-bit hash (FNV-1a) of the string's UTF-8 bytes.
+//
+// Used to pick a punchline variant deterministically. -[NSString hash] is not
+// guaranteed stable across GNUstep versions or platforms, and the whole point is
+// that the same commit yields the same punchline on every run and every machine.
+uint32_t CRStableHash(NSString *string);
