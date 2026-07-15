@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# macOS and Linux are separate jobs, not a fail-fast matrix: if one breaks we
+# still want the other's result. Debugging portability one platform at a time,
+# blind to the other, is exactly what this project exists to avoid.
+jobs:
+  macos:
+    name: macOS (native Foundation)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: make
+
+      - name: Test
+        run: make test
+
+      # A build can compile and still segfault on the first NSTask. Run the real
+      # binary against this very repository and require a clean exit.
+      - name: Smoke test
+        run: ./build/commit-roast --repo . --limit 20 --no-color
+
+  linux:
+    name: Linux (GNUstep)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # gobjc pulls the version-matched objc runtime headers and the libobjc.so
+      # dev symlink that clang needs; gnustep-base is built against that same GCC
+      # runtime. This is the MRC-on-the-GCC-runtime path decided in #3 — no
+      # libobjc2, so no ARC, and nothing to build from source.
+      - name: Install the GNUstep toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang make gobjc gnustep-make libgnustep-base-dev
+
+      - name: Build
+        run: make
+
+      - name: Test
+        run: make test
+
+      - name: Smoke test
+        run: ./build/commit-roast --repo . --limit 20 --no-color
