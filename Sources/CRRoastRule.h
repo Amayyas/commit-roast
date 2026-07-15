@@ -45,4 +45,12 @@ NSString *CRRuleSeverityName(CRRuleSeverity severity);
 // respondsToSelector:.
 - (void)prepareWithCommits:(NSArray *)commits;
 
+// A contextual count for this commit, fed to the punchline's {count} token.
+//
+// The duplicate rule returns how many times the subject appears ("repeated 14
+// times"). Rules that have no such number simply do not implement this, and the
+// engine passes 0. Keeps the engine from having to know the duplicate rule by
+// name to fill in its punchline.
+- (NSUInteger)countForCommit:(CRCommit *)commit;
+
 @end

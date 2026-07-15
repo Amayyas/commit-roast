@@ -79,6 +79,12 @@
     return [self occurrenceCountForCommit:commit] > 1;
 }
 
+// The {count} in "repeated 14 times".
+- (NSUInteger)countForCommit:(CRCommit *)commit
+{
+    return [self occurrenceCountForCommit:commit];
+}
+
 - (void)dealloc
 {
     [_counts release];
