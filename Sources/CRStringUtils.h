@@ -19,3 +19,11 @@ NSString *CRTruncateToGraphemes(NSString *string, NSUInteger maxGraphemes);
 // guaranteed stable across GNUstep versions or platforms, and the whole point is
 // that the same commit yields the same punchline on every run and every machine.
 uint32_t CRStableHash(NSString *string);
+
+// How many terminal columns the string occupies.
+//
+// Not its -length (UTF-16 code units) and not its grapheme count either: a CJK
+// ideograph and an emoji each take two columns, a composed accent's combining
+// mark takes zero. Box borders and padding sized from -length break the moment a
+// commit subject contains any of these.
+NSUInteger CRDisplayWidth(NSString *string);
