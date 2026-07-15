@@ -12,6 +12,7 @@
     NSArray *_breakdown;
     CRCommit *_worstCommit;
     NSString *_worstPunchline;
+    NSArray *_worstCommitRules;
 }
 
 @property (nonatomic, readonly) NSUInteger totalCommits;
@@ -29,6 +30,9 @@
 // The most roastable commit, or nil for a spotless history. Filled in by #14.
 @property (nonatomic, retain) CRCommit *worstCommit;
 @property (nonatomic, copy) NSString *worstPunchline;
+
+// Identifiers of every rule the worst commit tripped, for the JSON output.
+@property (nonatomic, copy) NSArray *worstCommitRules;
 
 - (instancetype)initWithTotalCommits:(NSUInteger)totalCommits
                        guiltyCommits:(NSUInteger)guiltyCommits

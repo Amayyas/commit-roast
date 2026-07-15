@@ -97,6 +97,7 @@ static NSInteger CRBreakdownCompare(id a, id b, void *context)
     // punchline). Nil until some commit is actually guilty.
     CRCommit *worstCommit = nil;
     id<CRRoastRule> worstRule = nil;
+    NSArray *worstRuleIds = nil;   // identifiers the worst commit tripped, for JSON
     CRBadness worstBadness;
     memset(&worstBadness, 0, sizeof(worstBadness));
 
@@ -106,6 +107,7 @@ static NSInteger CRBreakdownCompare(id a, id b, void *context)
         CRBadness badness;
         memset(&badness, 0, sizeof(badness));
         id<CRRoastRule> harshestRule = nil;   // most severe rule this commit trips
+        NSMutableArray *matchedIds = [NSMutableArray array];
 
         NSEnumerator *re = [_rules objectEnumerator];
         while ((rule = [re nextObject]) != nil) {
@@ -119,6 +121,7 @@ static NSInteger CRBreakdownCompare(id a, id b, void *context)
                 badness.maxSeverity = [rule severity];
                 harshestRule = rule;
             }
+            [matchedIds addObject:[rule identifier]];
 
             NSString *identifier = [rule identifier];
             NSNumber *count = [matchCounts objectForKey:identifier];
@@ -150,6 +153,7 @@ static NSInteger CRBreakdownCompare(id a, id b, void *context)
             || CRBadnessIsWorse(badness, [commit sha], worstBadness, [worstCommit sha])) {
             worstCommit = commit;
             worstRule = harshestRule;
+            worstRuleIds = matchedIds;
             worstBadness = badness;
         }
     }
@@ -196,6 +200,7 @@ static NSInteger CRBreakdownCompare(id a, id b, void *context)
         [report setWorstPunchline:[generator punchlineForRule:worstRule
                                                        commit:worstCommit
                                                         count:count]];
+        [report setWorstCommitRules:worstRuleIds];
     }
 
     return report;

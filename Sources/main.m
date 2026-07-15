@@ -7,6 +7,7 @@
 #import "CRCommitParser.h"
 #import "CRExitCodes.h"
 #import "CRGitLogReader.h"
+#import "CRJSONFormatter.h"
 #import "CRRoastEngine.h"
 #import "CRRoastRuleRegistry.h"
 #import "CRTextFormatter.h"
@@ -35,10 +36,16 @@ static int CRRun(CRArguments *args)
         [[[CRRoastEngine alloc] initWithRules:[CRRoastRuleRegistry defaultRules]] autorelease];
     CRRoastReport *report = [engine analyzeCommits:commits];
 
-    // Text for now; --format json swaps the formatter in #19. main never branches
-    // on the format beyond this line — both conform to CROutputFormatter.
-    id<CROutputFormatter> formatter =
-        [[[CRTextFormatter alloc] initWithColorEnabled:[args colorEnabled]] autorelease];
+    // Both conform to CROutputFormatter, so this is the only line that knows
+    // which format is in play; everything downstream just calls -formatReport:.
+    id<CROutputFormatter> formatter = nil;
+    if ([args jsonOutput]) {
+        formatter = [[[CRJSONFormatter alloc]
+            initWithRepositoryPath:[[args logOptions] repositoryPath]] autorelease];
+    } else {
+        formatter = [[[CRTextFormatter alloc]
+            initWithColorEnabled:[args colorEnabled]] autorelease];
+    }
     fputs([[formatter formatReport:report] UTF8String], stdout);
 
     return CRExitSuccess;

@@ -8,6 +8,7 @@
 @synthesize breakdown = _breakdown;
 @synthesize worstCommit = _worstCommit;
 @synthesize worstPunchline = _worstPunchline;
+@synthesize worstCommitRules = _worstCommitRules;
 
 - (instancetype)initWithTotalCommits:(NSUInteger)totalCommits
                        guiltyCommits:(NSUInteger)guiltyCommits
@@ -44,11 +45,22 @@
     _worstPunchline = copied;
 }
 
+- (void)setWorstCommitRules:(NSArray *)rules
+{
+    if (rules == _worstCommitRules) {
+        return;
+    }
+    NSArray *copied = [rules copy];
+    [_worstCommitRules release];
+    _worstCommitRules = copied;
+}
+
 - (void)dealloc
 {
     [_breakdown release];
     [_worstCommit release];
     [_worstPunchline release];
+    [_worstCommitRules release];
     [super dealloc];
 }
 
