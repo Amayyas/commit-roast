@@ -3,29 +3,45 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "CRVersion.h"
-
 #import "CRArgumentParser.h"
+#import "CRCommitParser.h"
 #import "CRExitCodes.h"
+#import "CRGitLogReader.h"
+#import "CRRoastEngine.h"
+#import "CRRoastRuleRegistry.h"
+#import "CRTextFormatter.h"
 #import "CRUsage.h"
 
 // Foundation only — importing AppKit or Cocoa here would break the Linux build,
 // since GNUstep only provides gnustep-base.
 
-static const char *const kBanner =
-    "                               _ _                            _\n"
-    "  ___ ___  _ __ ___  _ __ ___ (_) |_      _ __ ___   __ _ ___| |_\n"
-    " / __/ _ \\| '_ ` _ \\| '_ ` _ \\| | __|____| '__/ _ \\ / _` / __| __|\n"
-    "| (_| (_) | | | | | | | | | | | | ||_____| | | (_) | (_| \\__ \\ |_\n"
-    " \\___\\___/|_| |_| |_|_| |_| |_|_|\\__|    |_|  \\___/ \\__,_|___/\\__|\n";
-
-static void CRPrintBanner(void)
+// Reads the repository, roasts it, and prints the report. Returns a process exit
+// code.
+static int CRRun(CRArguments *args)
 {
-    // fputs rather than NSLog: NSLog writes to stderr and prefixes every line
-    // with a timestamp and the process name, which is not what a CLI banner is.
-    fputs(kBanner, stdout);
-    fprintf(stdout, "\n  Roasting your commit messages since 2026.  v%s\n\n",
-            CR_VERSION);
+    NSError *error = nil;
+    CRGitLogReader *reader = [[[CRGitLogReader alloc] init] autorelease];
+    NSString *rawLog = [reader rawLogWithOptions:[args logOptions] error:&error];
+
+    // A missing repo or a missing git is the environment's fault, not the user's
+    // syntax: stderr, exit 1 (runtime), distinct from the exit 2 of a bad flag.
+    if (rawLog == nil) {
+        fprintf(stderr, "commit-roast: %s\n", [[error localizedDescription] UTF8String]);
+        return CRExitRuntimeError;
+    }
+
+    NSArray *commits = [CRCommitParser parseRawLog:rawLog];
+    CRRoastEngine *engine =
+        [[[CRRoastEngine alloc] initWithRules:[CRRoastRuleRegistry defaultRules]] autorelease];
+    CRRoastReport *report = [engine analyzeCommits:commits];
+
+    // Text for now; --format json swaps the formatter in #19. main never branches
+    // on the format beyond this line — both conform to CROutputFormatter.
+    id<CROutputFormatter> formatter =
+        [[[CRTextFormatter alloc] initWithColorEnabled:[args colorEnabled]] autorelease];
+    fputs([[formatter formatReport:report] UTF8String], stdout);
+
+    return CRExitSuccess;
 }
 
 int main(int argc, char *argv[])
@@ -55,10 +71,6 @@ int main(int argc, char *argv[])
             return CRExitSuccess;
         }
 
-        // The analysis pipeline is wired in with the formatters (#17-#19). For
-        // now the run path prints the banner.
-        CRPrintBanner();
+        return CRRun(args);
     }
-
-    return CRExitSuccess;
 }
