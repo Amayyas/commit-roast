@@ -114,6 +114,13 @@ Enabling them would mean linking against `libBlocksRuntime`, i.e. one more share
 | `enumerateSubstringsInRange:` | `rangeOfComposedCharacterSequenceAtIndex:` |
 | `sortedArrayUsingComparator:` | `sortedArrayUsingSelector:` or `sortedArrayUsingFunction:context:` |
 
+## Two Objective-C literals that do not compile here
+
+`@"..."`, `@[...]`, `@{...}`, `@42` and `@(expr)` all work under the GCC runtime. Two things do not:
+
+- **`@YES` / `@NO`** — `YES` expands to `(BOOL)1`, so `@YES` becomes `@(BOOL)1`, which the compiler reads as a boxed *type name* and rejects with `unexpected type name 'BOOL'`. Use `[NSNumber numberWithBool:YES]`.
+- **Subscripting** — `array[0]` and `dict[key]` are not available. Use `objectAtIndex:` and `objectForKey:`.
+
 ## Troubleshooting
 
 ### `fatal error: 'objc/objc.h' file not found`
