@@ -1,9 +1,42 @@
 #import "CRRoastEngine.h"
 
+#include <string.h>
+
+#import "CRRoastLineGenerator.h"
 #import "CRRuleBreakdown.h"
+#import "CRStringUtils.h"
 
 // At most this many example commits per rule in the breakdown.
 static const NSUInteger kCRMaxExamplesPerRule = 3;
+
+// Everything needed to rank a commit's badness, plus tie-breakers. Filled for
+// each guilty commit and compared against the running worst.
+typedef struct {
+    NSInteger score;          // sum of triggered severities
+    NSUInteger ruleCount;     // how many rules it tripped
+    NSInteger maxSeverity;    // the harshest single rule
+    NSUInteger subjectLength; // graphemes; shorter is worse
+} CRBadness;
+
+// Is `a` a worse commit than `b`? The chain is exhaustive down to the SHA, so
+// two runs on the same history always elect the same commit — the output has to
+// be reproducible, or it cannot be tested and re-runs would reshuffle it.
+static BOOL CRBadnessIsWorse(CRBadness a, NSString *shaA, CRBadness b, NSString *shaB)
+{
+    if (a.score != b.score) {
+        return a.score > b.score;
+    }
+    if (a.ruleCount != b.ruleCount) {
+        return a.ruleCount > b.ruleCount;
+    }
+    if (a.maxSeverity != b.maxSeverity) {
+        return a.maxSeverity > b.maxSeverity;
+    }
+    if (a.subjectLength != b.subjectLength) {
+        return a.subjectLength < b.subjectLength;   // shorter subject is worse
+    }
+    return [shaA compare:shaB] == NSOrderedAscending;   // last resort, total order
+}
 
 // Sorts breakdowns most-frequent first. A plain selector comparator would need
 // CRRuleBreakdown to expose an NSNumber; a function keeps the ordering logic
@@ -60,17 +93,32 @@ static NSInteger CRBreakdownCompare(id a, id b, void *context)
     NSMutableDictionary *examples = [NSMutableDictionary dictionary];       // id -> NSMutableArray
     NSUInteger guilty = 0;
 
+    // The running worst commit, and the harshest rule it tripped (for its
+    // punchline). Nil until some commit is actually guilty.
+    CRCommit *worstCommit = nil;
+    id<CRRoastRule> worstRule = nil;
+    CRBadness worstBadness;
+    memset(&worstBadness, 0, sizeof(worstBadness));
+
     NSEnumerator *ce = [commits objectEnumerator];
     CRCommit *commit = nil;
     while ((commit = [ce nextObject]) != nil) {
-        BOOL commitIsGuilty = NO;
+        CRBadness badness;
+        memset(&badness, 0, sizeof(badness));
+        id<CRRoastRule> harshestRule = nil;   // most severe rule this commit trips
 
         NSEnumerator *re = [_rules objectEnumerator];
         while ((rule = [re nextObject]) != nil) {
             if (![rule matchesCommit:commit]) {
                 continue;
             }
-            commitIsGuilty = YES;
+
+            badness.score += [rule severity];
+            badness.ruleCount += 1;
+            if ((NSInteger)[rule severity] > badness.maxSeverity) {
+                badness.maxSeverity = [rule severity];
+                harshestRule = rule;
+            }
 
             NSString *identifier = [rule identifier];
             NSNumber *count = [matchCounts objectForKey:identifier];
@@ -88,11 +136,21 @@ static NSInteger CRBreakdownCompare(id a, id b, void *context)
             }
         }
 
+        if (badness.ruleCount == 0) {
+            continue;   // a clean commit
+        }
+
         // The whole point: a commit tripping three rules is ONE guilty commit,
         // not three. Otherwise the score climbs past 100 and stops meaning
         // anything.
-        if (commitIsGuilty) {
-            guilty++;
+        guilty++;
+
+        badness.subjectLength = CRGraphemeLength([commit subject]);
+        if (worstCommit == nil
+            || CRBadnessIsWorse(badness, [commit sha], worstBadness, [worstCommit sha])) {
+            worstCommit = commit;
+            worstRule = harshestRule;
+            worstBadness = badness;
         }
     }
 
@@ -117,10 +175,30 @@ static NSInteger CRBreakdownCompare(id a, id b, void *context)
 
     double shameScore = 100.0 * (double)guilty / (double)total;
 
-    return [[[CRRoastReport alloc] initWithTotalCommits:total
-                                          guiltyCommits:guilty
-                                             shameScore:shameScore
-                                              breakdown:breakdown] autorelease];
+    CRRoastReport *report =
+        [[[CRRoastReport alloc] initWithTotalCommits:total
+                                       guiltyCommits:guilty
+                                          shameScore:shameScore
+                                           breakdown:breakdown] autorelease];
+
+    // The finale: the single most roastable commit, with a punchline drawn from
+    // its harshest rule — the one that best explains why it is the worst. Left
+    // nil on a spotless history, so the formatter congratulates instead of
+    // printing an empty box.
+    if (worstCommit != nil) {
+        NSUInteger count = 0;
+        if ([worstRule respondsToSelector:@selector(countForCommit:)]) {
+            count = [worstRule countForCommit:worstCommit];
+        }
+        CRRoastLineGenerator *generator =
+            [[[CRRoastLineGenerator alloc] init] autorelease];
+        [report setWorstCommit:worstCommit];
+        [report setWorstPunchline:[generator punchlineForRule:worstRule
+                                                       commit:worstCommit
+                                                        count:count]];
+    }
+
+    return report;
 }
 
 - (void)dealloc
