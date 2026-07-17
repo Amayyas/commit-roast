@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    name: Build ${{ matrix.asset }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            asset: macos-arm64
+          - os: ubuntu-latest
+            asset: linux-x86_64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the GNUstep toolchain
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang make gobjc gnustep-make libgnustep-base-dev
+
+      - name: Build and strip
+        run: |
+          make
+          strip build/commit-roast
+
+      # Stage into a named directory so extraction gives a clean folder rather
+      # than a loose binary in the user's cwd.
+      - name: Package
+        run: |
+          DIR="commit-roast-${GITHUB_REF_NAME}-${{ matrix.asset }}"
+          mkdir -p "dist/${DIR}"
+          cp build/commit-roast LICENSE "dist/${DIR}/"
+          tar -C dist -czf "dist/${DIR}.tar.gz" "${DIR}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/*.tar.gz
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    # Creating a release writes to the repo; without this the API returns 403.
+    permissions:
+      contents: write
+    steps:
+      - name: Collect artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd artifacts
+          sha256sum *.tar.gz > checksums.txt
+          cat checksums.txt
+
+      # The Linux binary is dynamically linked against libgnustep-base, so it
+      # will not start on a machine that does not have GNUstep. Rather than
+      # static-linking (which gnustep-base does not support cleanly), the
+      # dependency is stated plainly in the notes with the install command.
+      - name: Release notes
+        run: |
+          cat > notes.md <<'EOF'
+          ## Install
+
+          **macOS** — links against the system Foundation, no dependencies:
+
+          ```sh
+          tar xzf commit-roast-*-macos-arm64.tar.gz
+          ./commit-roast-*/commit-roast --help
+          ```
+
+          **Linux** — the binary is dynamically linked against GNUstep, so it
+          needs the runtime installed:
+
+          ```sh
+          sudo apt-get install -y gnustep-base-runtime libobjc4
+          tar xzf commit-roast-*-linux-x86_64.tar.gz
+          ./commit-roast-*/commit-roast --help
+          ```
+
+          Verify a download against `checksums.txt`:
+
+          ```sh
+          sha256sum -c checksums.txt
+          ```
+          EOF
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/*.tar.gz
+            artifacts/checksums.txt
+          body_path: notes.md
+          fail_on_unmatched_files: true
