@@ -165,7 +165,7 @@ Cross-platform portability is verified in CI on both macOS and Linux on every pu
 Part of a small family of "roast" tools:
 
 - [focus-roast](https://github.com/Amayyas/focus-roast)
-- [git-shame](https://github.com/Amayyas/git-shame)
+- [repo-roast](https://github.com/Amayyas/repo-roast)
 
 ## Contributing
 
