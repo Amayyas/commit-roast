@@ -1,0 +1,39 @@
+commit-roast — sample output
+================================================================
+Generated with:  commit-roast --no-color
+Run against a demo history that mixes tidy commits with the usual
+wip / fix / ALL CAPS mess a real project accumulates. No real
+repository or author is involved.
+================================================================
+
+commit-roast
+
+  Shame score  █████████████░░░░░░░░░░░ 56/100
+  14 of 25 commits could have tried harder.
+
+What we found
+  █████░░░░░░░  [medium]  Message too short      11 (44%)
+      0e4c1b7  fix
+      fd16f9a  update
+      0eb8d35  wip
+  █████░░░░░░░  [high]  Generic message        10 (40%)
+      0e4c1b7  fix
+      fd16f9a  update
+      0eb8d35  wip
+  ███░░░░░░░░░  [medium]  Duplicated message     7 (28%)
+      0e4c1b7  fix
+      0eb8d35  wip
+      677243f  fix
+  █░░░░░░░░░░░  [low]  Not in the imperative  2 (8%)
+      29e1a7f  Fixing the flaky retry test
+      41eb234  Added tests for the parser
+  ░░░░░░░░░░░░  [medium]  ALL CAPS               1 (4%)
+      1f65e66  FIX THE BUILD
+  ░░░░░░░░░░░░  [high]  Emoji only             1 (4%)
+      53e57ac  🔥
+
+Worst offender
+  ┌───────────────────────────────────────────────────────────┐
+  │ 0e4c1b7  fix                                              │
+  │ “fix” tells me a change happened. Nothing else, but that. │
+  └───────────────────────────────────────────────────────────┘
